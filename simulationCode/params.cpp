@@ -20,13 +20,14 @@
 void params::readparams(int n, char* cmdline[])
 {
   int a;
-  ctype = 5; // 1 normal, 2 heat map, 3 from state file, 4 from state spes file, 5 rejection algo, 6 rejection maps, 7 rejection random lattice, 8 dynamic random lattice
+  CintRandom = true; // Coulomb interaction for random positions (instead of screen)
+  ctype = 7; // 1 normal, 2 heat map, 3 from state file, 4 from state spes file, 5 rejection algo, 6 rejection maps, 7 rejection random lattice, 8 dynamic random lattice
   cutoffexp = 7;
   d2el = 5;
   d = 1;
   dim = 2;
   disU = 1.0; // Magnitude of disorder potential
-  doTriJumps = true;
+  doTriJumps = false;
   eonsteps = 256; //# of time step in which the ext field is on
   extf = 0;
   Ex = 0.040;
@@ -57,7 +58,7 @@ void params::readparams(int n, char* cmdline[])
   rsstate = 2;     //the initial state config
   running = false;
   runs = 1;
-  screen = 0.5; //screening length: < 0 sets: len/2 (max: len-1)
+  screen = -1; //screening length: < 0 sets: len/2 (max: len-1)
   seed2 = 1;
   skipsteps = 0; //all timesteps are recorded
   spesfilename = "";
@@ -84,7 +85,7 @@ void params::readparams(int n, char* cmdline[])
 
   outputendfix = "Hz_" + string(Hz_s)+  "_Ex_" + string(Ex_s) + "_T_" + string(temp_s);
   writelines = 10000;
-  timesteps = pow(10,4);
+  timesteps = pow(10,6);
   if(n >1)
   {
 
@@ -97,6 +98,7 @@ void params::readparams(int n, char* cmdline[])
        if(pf->getstring("trace") == "yes") trace = true;
        if(pf->getstring("xpbc") == "no") xpbc = false;
        if(stopfilename == "") stopfilename = "stop";
+       CintRandom = bool(pf->getint("Cint", CintRandom));
        doTriJumps = bool(pf->getint("triJumps", doTriJumps));
        Ex = pf->getdouble("Ex",Ex);
        Ey = pf->getdouble("Ey",Ey);

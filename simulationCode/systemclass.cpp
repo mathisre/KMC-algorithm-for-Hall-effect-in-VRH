@@ -18,9 +18,9 @@ using namespace std;
 
 string IntToHexStr(unsigned int a,int dig)
 {
-	string s="";
-	for(int i=0;i<(dig<<2);i+=4) s=string(1,b32char[(a>>i)%16])+s;
-	return s;
+    string s="";
+    for(int i=0;i<(dig<<2);i+=4) s=string(1,b32char[(a>>i)%16])+s;
+    return s;
 }
 
 string hexstr(unsigned char *a,int l)
@@ -28,7 +28,7 @@ string hexstr(unsigned char *a,int l)
   string s="";
   for(int i=0;i<l;i++)
    {
-	 s=s+string(1,b32char[a[i]>>4])+string(1,b32char[a[i]&0x0F]);
+     s=s+string(1,b32char[a[i]>>4])+string(1,b32char[a[i]&0x0F]);
    }
   return s;
 }
@@ -44,7 +44,6 @@ double angle(int x, int y){
     if (xF > 0 && yF < 0) return 2*M_PI + atan(yF/xF);
     return 0;
 }
-
 //---------------------------------------------------------------------------
 
 ESystem::ESystem(int size, int dim, double nu,int rs)
@@ -659,7 +658,17 @@ double ESystem::calcenergy()
  double E=0.0;
  for(int i=0;i<N;i++) E+=getsiteen(i,-1,0);
  return E;
-};
+}
+
+
+double ESystem::calcenergyRandomPositions()
+{
+ double E=0.0;
+ printf("spe 0: %.3f\n", spe[0]);
+ for(int i=0;i<N;i++) E+=getsiteenRandomPositions(i,-1,0);
+ printf("spe 0: %.3f\n", spe[0]);
+ return E;
+}
 
 double ESystem::calcenergyfromSPE()
 {
@@ -703,54 +712,154 @@ double ESystem::getsiteen(int x, int y, int z,bool calc,bool getspe)
   }
  else
   {if(D==1) p=x;
-	  else if(D==2) p=x+L*y;
-	  else if(D==3) p=x+L*(y+L*z);
+      else if(D==2) p=x+L*y;
+      else if(D==3) p=x+L*(y+L*z);
   }
  if(!calc) {if(getspe)
-			 {if(hasSPE) return spe[p];else return calcSPE(p);}
-			return siteen[p];}
+             {if(hasSPE) return spe[p];else return calcSPE(p);}
+            return siteen[p];}
  if(D==1)
   {
    for(m1=1;m1<=rM;m1++)
-	{
-		rin=getindist(x,0,0,p,m1,0,0,l1);
-		if(rin>=rmaxi)
-		 {if(l1<0)
-		   {l1=x+m1;PBC(l1,L);
-			l2=x-m1;PBC(l2,L);
-			sec+=rin*(n[l1]+n[l2]-occnum-occnum);}
-		  else sec+=rin*(n[l1]-occnum);
-		 }
-		if(hasdg)
-		  {
-			 rin=getindist(x,0,0,p,-m1,0,0,l2);  //if hasdg, l2 is valid
-			 if(rin>=rmaxi) sec+=rin*(n[l2]-occnum);
-		  }
-	}
+    {
+        rin=getindist(x,0,0,p,m1,0,0,l1);
+        if(rin>=rmaxi)
+         {if(l1<0)
+           {l1=x+m1;PBC(l1,L);
+            l2=x-m1;PBC(l2,L);
+            sec+=rin*(n[l1]+n[l2]-occnum-occnum);}
+          else sec+=rin*(n[l1]-occnum);
+         }
+        if(hasdg)
+          {
+             rin=getindist(x,0,0,p,-m1,0,0,l2);  //if hasdg, l2 is valid
+             if(rin>=rmaxi) sec+=rin*(n[l2]-occnum);
+          }
+    }
   }
  else if(D==2)
   { for(m2=-rM;m2<=rM;m2++)
-		 {if(!hasdg) {off=ABS(m2)*L;l2=y+m2;PBC(l2,L);l2=l2*L;}
-		  for(m1=-rM;m1<=rM;m1++)
-		   {if(hasdg) rin=getindist(x,y,0,p,m1,m2,0,q,true);
-			else {rin=indist[off+ABS(m1)];l1=x+m1;PBC(l1,L);q=l2+l1;}
-			if(rin>=rmaxi) sec+=rin*(n[q]-occnum);
-		   }
-		 }
+         {if(!hasdg) {off=ABS(m2)*L;l2=y+m2;PBC(l2,L);l2=l2*L;}
+          for(m1=-rM;m1<=rM;m1++)
+           {if(hasdg) rin=getindist(x,y,0,p,m1,m2,0,q,true);
+            else {rin=indist[off+ABS(m1)];l1=x+m1;PBC(l1,L);q=l2+l1;}
+            if(rin>=rmaxi) sec+=rin*(n[q]-occnum);
+           }
+         }
   }
  else if(D==3)
   { for(m1=-rM;m1<=rM;m1++)
-		   {if(!hasdg) {off2=ABS(m3)*L;l3=z+m3;PBC(l3,L);l3=l3*L;}
-			for(m2=-rM;m2<=rM;m2++)
-			 {if(!hasdg) {off=(off2+ABS(m2))*L;l2=y+m2;PBC(l2,L);l2=(l3+l2)*L;}
-			  for(m3=-rM;m3<=rM;m3++)
-			   {if(hasdg) rin=getindist(x,y,z,p,m1,m2,m3,q,true);
-				else {rin=indist[off+ABS(m1)];l1=x+m1;PBC(l1,L);q=l2+l1;}
-				if(rin>=rmaxi) sec+=rin*(n[q]-occnum);
-			   }
-			 }
-		   }
+           {if(!hasdg) {off2=ABS(m3)*L;l3=z+m3;PBC(l3,L);l3=l3*L;}
+            for(m2=-rM;m2<=rM;m2++)
+             {if(!hasdg) {off=(off2+ABS(m2))*L;l2=y+m2;PBC(l2,L);l2=(l3+l2)*L;}
+              for(m3=-rM;m3<=rM;m3++)
+               {if(hasdg) rin=getindist(x,y,z,p,m1,m2,m3,q,true);
+                else {rin=indist[off+ABS(m1)];l1=x+m1;PBC(l1,L);q=l2+l1;}
+                if(rin>=rmaxi) sec+=rin*(n[q]-occnum);
+               }
+             }
+           }
   }
+ Ni=n[p];
+ if(Ni!=0) sed=U*Ni*dis[p];
+ siteen[p]=sed+0.5*sec*(Ni-occnum);
+ if(hasSPE) {spe[p]=calcSPE(p);if(getspe) return spe[p];}
+ if(getspe) return calcSPE(p);
+ return siteen[p];
+}
+
+double ESystem::getsiteenRandomPositions(int x, int y, int z,bool calc,bool getspe)
+{ // calc true, getspe false
+ double rin,sed=0.0,sec=0.0;
+ int p=0,q,Ni,m1,m2,m3;
+ int off,off2,l1,l2,l3;
+ if(y<0) //array index given in x
+  {
+   p=x;
+   if(D>1) {x=p%L;y=p/L;}
+   if(D>2) {z=y/L;y=y%L;}
+  }
+ else
+  {if(D==1) p=x;
+      else if(D==2) p=x+L*y;
+      else if(D==3) p=x+L*(y+L*z);
+  }
+ if(!calc) {
+     if(getspe){
+         if(hasSPE) return spe[p];
+         else return calcSPE(p);
+     }
+            return siteen[p];
+ }
+
+ double rinv;
+ if (CintRandomPositions){
+     for (q=0; q<p; q++){
+         rinv = 1/getDistanceMatrix(p,q);
+         if (rinv >= rmaxi){
+             sec+=rinv*(n[q]-occnum);
+         }
+     }
+     for (q=p+1; q<N; q++){
+         rinv = 1/getDistanceMatrix(p,q);
+         if (rinv >= rmaxi){
+             sec+=rinv*(n[q]-occnum);
+         }
+     }
+ }
+/*
+ if(D==1)
+  {
+   for(m1=1;m1<=rM;m1++)
+    {
+        rin=getindist(x,0,0,p,m1,0,0,l1);
+        if(rin>=rmaxi)
+         {if(l1<0)
+           {l1=x+m1;PBC(l1,L);
+            l2=x-m1;PBC(l2,L);
+            sec+=rin*(n[l1]+n[l2]-occnum-occnum);}
+          else sec+=rin*(n[l1]-occnum);
+         }
+        if(hasdg)
+          {
+             rin=getindist(x,0,0,p,-m1,0,0,l2);  //if hasdg, l2 is valid
+             if(CintRandomPositions && rin>=rmaxi) sec+=rin*(n[l2]-occnum);
+          }
+    }
+  }
+ else if(D==2)
+  { for(m2=-rM;m2<=rM;m2++){
+         if(!hasdg) {
+             off=ABS(m2)*L;
+             l2=y+m2;
+             PBC(l2,L);
+             l2=l2*L;
+         }
+         for(m1=-rM;m1<=rM;m1++){
+             if(hasdg) rin=getindist(x,y,0,p,m1,m2,0,q,true);
+            else {
+                 rin=indist[off+ABS(m1)];
+                 l1=x+m1;PBC(l1,L);
+                 q=l2+l1;
+             }
+            if(CintRandomPositions && rin>=rmaxi) sec+=rin*(n[q]-occnum);
+           }
+         }
+  }
+ else if(D==3)
+  { for(m1=-rM;m1<=rM;m1++)
+           {if(!hasdg) {off2=ABS(m3)*L;l3=z+m3;PBC(l3,L);l3=l3*L;}
+            for(m2=-rM;m2<=rM;m2++)
+             {if(!hasdg) {off=(off2+ABS(m2))*L;l2=y+m2;PBC(l2,L);l2=(l3+l2)*L;}
+              for(m3=-rM;m3<=rM;m3++)
+               {if(hasdg) rin=getindist(x,y,z,p,m1,m2,m3,q,true);
+                else {rin=indist[off+ABS(m1)];l1=x+m1;PBC(l1,L);q=l2+l1;}
+                if(CintRandomPositions && rin>=rmaxi) sec+=rin*(n[q]-occnum);
+               }
+             }
+           }
+  }
+  */
  Ni=n[p];
  if(Ni!=0) sed=U*Ni*dis[p];
  siteen[p]=sed+0.5*sec*(Ni-occnum);
@@ -802,6 +911,11 @@ double ESystem::addsiteenFromSecondLayer(int x, int y, int z, ESystem *es2)
  return siteen[p];
 }
 
+void ESystem::setCintRandomPositions(bool value)
+{
+    CintRandomPositions = value;
+}
+
 //---------------------------------------------------------------------------
 
 
@@ -814,8 +928,9 @@ double ESystem::calcSPE(int p)
 
 void ESystem::updateSPE()
 {
+
  for(int i=0;i<N;i++) spe[i]=calcSPE(i);
-};
+}
 
 void ESystem::updateSPEi(int i)
 {
@@ -914,6 +1029,67 @@ double ESystem::flipsite(int x,int y,int z,int p)
 		 }
   }
 
+  if(Nn!=0) sed = U * Nn * dis[p];
+  en = sed + 0.5 * sec * (Nn-occnum);
+  dE += en-siteen[p];
+  siteen[p] = en;
+  if(hasSPE) spe[p] = calcSPE(p);
+  return dE;
+}
+
+double ESystem::flipsiteRandomPositions(int x,int y,int z,int p)
+{ // We are passing in (x,y,z,n) for each site
+  double rin,en,sed=0.0,sec=0.0,dE=0.0,de;
+  int NSite,Nn,m1,m2,q;
+  int off,l1,l2;
+
+  if(x < 0) //then p must be valid
+  {
+    x = p;
+    if(D > 1) {x = p%L; y = p/L;}
+    if(D > 2) {z = y/L; y = y%L;}
+  }
+  else if(p < 0)
+  {
+      if(D == 1) p = x;
+      else if(D == 2) p = x + L*y;
+      else if(D == 3) p = x + L*(y + L*z);
+  }
+  NSite = n[p];
+  Nn = 0;
+  if(NSite == 0) Nn = 1;
+  NSite = Nn-NSite; // 1 hvis n[p] = 0, -1 hvis n[p] = 1
+  n[p] = Nn;
+
+
+//  cout << "rM: " << rM << endl;
+  // VIKTIG AA UNNGAA SELF INTERACTION, LIMIT PAA L/2
+  double rinv;
+  if (CintRandomPositions){
+      for (q=0; q<p; q++){
+          rinv = 1/getDistanceMatrix(p,q);
+          if (rinv >= rmaxi){
+              en = rinv*(n[q]-occnum);
+              sec += en;
+              de = 0.5*en*NSite;
+              dE += de;
+              siteen[q] += de;
+              if(hasSPE) spe[q] = calcSPE(q);
+          }
+
+      }
+      for (q=p+1; q<N; q++){
+          rinv = 1/getDistanceMatrix(p,q);
+          if (rinv >= rmaxi){
+              en = rinv*(n[q]-occnum);
+              sec += en;
+              de = 0.5*en*NSite;
+              dE += de;
+              siteen[q] += de;
+              if(hasSPE) spe[q] = calcSPE(q);
+          }
+      }
+  }
   if(Nn!=0) sed = U * Nn * dis[p];
   en = sed + 0.5 * sec * (Nn-occnum);
   dE += en-siteen[p];
@@ -1066,6 +1242,34 @@ double ESystem::hoppEdiffij(int i,int j)
   //m*m omitted in the last term  10 multipl & 2 div
 }
 
+double ESystem::hoppEdiffRandomPositions(int i,int j)
+{
+  int p,q,m,a,b,c,k;
+  double inp,inq,rin;
+  p = i; q = j;
+  if(D>1) {i=p%L; j=p/L; a=q%L; b=q/L;}
+  if(D>2) {k=j/L; j=j%L; c=b/L; b=b%L;}
+  if(n[p] == n[q]) return 0.0;
+
+  rin = 1/getDistanceMatrix(i,j);
+  //rin=indist[getdistidx(i,j,k,a,b,c)];
+  if( !CintRandomPositions ) {rin=0;/* printf("rin<rmaxi %f %f\n",rin,rmaxi);*/}  //last term in energy difference only relevant if site q&p interact
+
+  m = n[q] - n[p]; // -1
+  if(hasSPE) // single particle energy
+   {
+     if(m == 1) return (spe[p] - spe[q] - rin); //no double multiplication
+     return (spe[q] - spe[p] - rin); // spe maa oppdateres i hvert steg
+     // e_j - e_i
+   }
+  inp = 1/((double)n[p] - occnum); //ocnum er fill ratio
+  inq = 1/((double)n[q] - occnum);
+
+  return (2*m*(siteen[p]*inp - siteen[q]*inq) +
+          U*m*(dis[q]*(occnum + n[q])*inq - dis[p]*(occnum + n[p])*inp)- rin);
+  //m*m omitted in the last term  10 multipl & 2 div
+}
+
 
 //calculate the total energy change, if i->j and k->l
 double ESystem::hoppEdiffijkl(int i,int j,int k,int l,  int dx, int dy, int dx2, int dy2)
@@ -1180,6 +1384,43 @@ double ESystem::hopp(int i,int j,int k,int a,int b,int c) // (i,-1,0,j,0,0)
   }
   sitesMoved[p] = 1;
   sitesMoved[q] = 1;
+
+  return dE; //getenergy()-dE;
+}
+
+
+double ESystem::hoppRandomPositions(int i,int j,int k,int a,int b,int c) // (i,-1,0,j,0,0)
+{
+  int p,q,m;
+  double dE = 0.0;
+
+  if(j < 0) //means that array index is used in i & a, and not coordinates
+   {
+    p = i; q = a;
+    if(D>1) {i=p%L; j=p/L; a=q%L; b=q/L;}
+    if(D>2) {k=j/L; j=j%L; c=b/L; b=b%L;}
+   }
+  else {p = i+L*(j+L*k); q = a+L*(b+L*c);}
+
+  if(n[p] == n[q]) { return dE;} // This should never occur, because we have made sure i is occupied and j is vacant
+
+  //dE=getenergy(); //hoppEdiff(i,j,k,a,b,c);
+
+  dE =  flipsiteRandomPositions(i,j,k,p); //oppdateres spe og occunumber
+  dE += flipsiteRandomPositions(a,b,c,q);
+
+  if(tracepart) // false
+  {
+    m = partnum[p];
+    partnum[p] = partnum[q];
+    partnum[q] = m;
+    if(m>= 0) partpos[m]=q;
+    m = partnum[p];
+    if(m >= 0) partpos[m] = p;
+  }
+  sitesMoved[p] = 1;
+  sitesMoved[q] = 1;
+
 
   return dE; //getenergy()-dE;
 }
@@ -1685,3 +1926,21 @@ void ESystem::movedtofile(string filename)
 
 }
 
+double ESystem::getDistanceMatrix(int i, int j) const
+{
+    if (j < i) return distanceMatrix[i][j];
+    return distanceMatrix[j][i];
+}
+
+void ESystem::setDistanceMatrix(double **value, int N)
+{
+    int i,j;
+    distanceMatrix = new double*[N];
+    for (i=0; i<N; i++){
+      distanceMatrix[i] = new double[i];
+      for (j=0;j<i; j++){
+          distanceMatrix[i][j] = value[i][j];
+      }
+    }
+
+}

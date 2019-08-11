@@ -534,7 +534,6 @@ void run::runCurrentRejection(class params *p) //2D only so far!!!
 
 
 
-// Not finished / takes too long
 void run::runCurrentRejectionRandomLattice(class params *p) //2D only so far!!!
 {
 
@@ -555,10 +554,11 @@ void run::runCurrentRejectionRandomLattice(class params *p) //2D only so far!!!
   Ex = p->Ex; Ey = p->Ey; Ez = p->Ez;
   Hx = p->Hx; Hy = p->Hy; Hz = p->Hz;
 
-  es = new ESystem(L,D,p->fill,p->rsconfig); // Her skjer det mye !
+  es = new ESystem(L, D, p->fill,p->rsconfig); // Her skjer det mye !
   es->setrmax(p->screen); // -1.0
   es->setU(p->disU); // 1.0
   es->setT(p->temp);
+  es->setCintRandomPositions(p->CintRandom);
 
   es->ran2(p->rsstate);
 
@@ -568,7 +568,6 @@ void run::runCurrentRejectionRandomLattice(class params *p) //2D only so far!!!
   es->reconfig(p->istate); //creates a new (random) initial state
   es->setSPE(true);
 
-  energy = es->calcenergy();
 //  printf("Energy: %le\n",energy);
 
   MKcurr = new MKcurrentRejection(steps);
@@ -581,10 +580,13 @@ void run::runCurrentRejectionRandomLattice(class params *p) //2D only so far!!!
   fflush(stdout);
 
   MKcurr->setES(es);
-  MKcurr->initRandomLattice(D, L, N, p->maxJL, p->loc, 1.0/p->temp,p->maxProbability, p->Hz, p->doTriJumps); // <- calculates rates
+
+  MKcurr->initRandomLattice(D, L, N, p->maxJL, p->loc, 1.0/p->temp,p->maxProbability, p->CintRandom); // <- calculates rates
+  printf("After init\n"); fflush(stdout);
   MKcurr->setWritelines(p->writelines);
   MKcurr->setRatefun(p->ratefun); //
 
+  energy = es->calcenergyRandomPositions(); // This needs to be fixed for ES regime
 
   MKcurr->setMTseed(p->seed2); // seed for MT RanGen to be used in getJump, this one uses Mersenne
   printf("MKcurrent initialized\n");
@@ -602,7 +604,6 @@ void run::runCurrentRejectionRandomLattice(class params *p) //2D only so far!!!
 
     printf("\n-------Finished with run %d--------\n\n", run);
 
-    MKcurr->sample2SiteJumps(steps);
     printf("For fil\n");
     fflush(stdout);
 

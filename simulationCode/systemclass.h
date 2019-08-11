@@ -114,6 +114,7 @@ public:
 	double hoppEdiffij(int i,int j); //energy difference if (i,j,k) <-> (a,b,c)
 	double hoppEdiffijkl(int i,int j,int k,int l,  int dx, int dy, int dx2, int dy2);
 	double hoppEdiffxyz(int i,int j,int k,int a,int b,int c); //energy difference if (i,j,k) <-> (a,b,c)
+    double hoppEdiffRandomPositions(int i, int j);
 
 
 	double hopp(int i,int j,int k,int a,int b,int c);
@@ -176,11 +177,24 @@ public:
 
     double getOccnum() const;
 
+    double getDistanceMatrix(int i, int j) const;
+    void setDistanceMatrix(double **value, int N);
+
+
+    void setCintRandomPositions(bool value);
+
+    double hoppRandomPositions(int i,int j,int k,int a,int b,int c);
+    double flipsiteRandomPositions(int x, int y, int z, int p);
+    double getsiteenRandomPositions(int x, int y, int z,bool calc=true,bool getspe=false);
+    double calcenergyRandomPositions(); //recalculates the complete energy
+
+
 private:
     int L,N,D,rM,NP;
     int InitRS,Rseed,tracepos,traceL,traceN,traceskip;
  bool tracepart,xpbc;
- char *n;
+ char *n; 
+ double **distanceMatrix;
  double *density; //cont. density
  double *dis,*indist,*indistDrag,*disgrid; //disorder,inverse square lattice distances, displacement grid (dx,dy,dz) for each lattice position, with |da|<1/4 [a=x,y,z]
  int *partnum; //particle labels on the lattice: N
@@ -206,6 +220,8 @@ private:
 
  void resitrace(double *resi,double *minres,int* pred,int pos,bool vert);
  double addsiteenFromSecondLayer(int x, int y, int z, ESystem *es2);
+
+ bool CintRandomPositions;
 
 };
 

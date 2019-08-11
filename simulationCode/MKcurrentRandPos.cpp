@@ -351,6 +351,7 @@ void MKcurrentRandPos::runCurrent(int steps,double &E, double &t)
   meanJumpLength = 0;
   meandx = 0;
   meandy = 0;
+  double actualmeanMCs = 0;
 
   for (s = 0; s < steps; s++)
   {
@@ -369,7 +370,7 @@ void MKcurrentRandPos::runCurrent(int steps,double &E, double &t)
       E += dE;
       t += dt;
 
-
+      actualmeanMCs += MCs;
 
       meanJumpLength += distanceMatrix[i][j];
       meandx += dx;
@@ -389,10 +390,12 @@ void MKcurrentRandPos::runCurrent(int steps,double &E, double &t)
       dys[s] = dy;
 
       MCsteps[s]=MCs;
+
       if (s%100000==0) {
-          printf("%6d E=%le MCs=%d\n",s,E,MCs);
-//          actualmeanMCs =0;
+          printf("%6d E=%le MCs=%.3f\n",s,E,actualmeanMCs/100000);
+          actualmeanMCs =0;
       }
+
 
     }
   printf("\n-------Finishing timesteps--------\n\n");

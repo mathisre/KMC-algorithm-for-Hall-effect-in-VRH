@@ -9,10 +9,8 @@
 
 
 
-// Remove eventually
-#include <iostream>
-#include <fstream>
 
+#include <fstream>
 MKcurrentRejection::MKcurrentRejection(int steps)
 {
   from = new int[steps];
@@ -209,6 +207,7 @@ bool inline MKcurrentRejection::testjump(int i, int j, int dx, int dy)
 
   if (gamma >= maxAccept) printf("Rate larger than max accept!!! gamma: %.4f, maxAccept: %.4f\n", gamma, maxAccept);
   r2 = maxAccept*es->ran2(0);
+
   return (r2 < gamma);
 
 }
@@ -494,7 +493,7 @@ void MKcurrentRejection::jumpsToFileSmall(string filename, int steps)
 void MKcurrentRejection::runCurrentRandomLattice(int steps,double &E, double &t)
 {
 
-  int s, MCs, i=0, j=0,  jumpNumber=0;
+  int s, MCs, i=0, j=0,  neighborNumber=0;
   double dx=0, dy=0;
   double dE,dt;
   bool jump;
@@ -503,14 +502,9 @@ void MKcurrentRejection::runCurrentRandomLattice(int steps,double &E, double &t)
   printf("t: %.7f\n", tMC);
 
 
-  meanJumpLength = 0;
-  meandx = 0;
-  meandy = 0;
-  testedNumberOf2Site = 0;
-  numberOf2Site = 0;
 
-  dxsR = new double[steps];
-  dysR = new double[steps];
+  dxsReal = new double[steps];
+  dysReal = new double[steps];
 
   double meanMCs = 0;
   double actualmeanMCs = 0;
@@ -523,26 +517,21 @@ void MKcurrentRejection::runCurrentRandomLattice(int steps,double &E, double &t)
       while (!jump)
       {
 
-          MCs++;
-
-          testedNumberOf2Site++;
-          getjumpRandomLattice(i,j,jumpNumber);
-          jump=testjumpRandomLattice(i,j,jumpNumber);
+          MCs++;;
+          getjumpRandomLattice(i,j,neighborNumber);
+          jump=testjumpRandomLattice(i,j,neighborNumber);
       }
-      dE = es->hopp(i,-1,0,j,0,0);
+      dE = es->hoppRandomPositions(i,-1,0,j,0,0);
 
       dt = MCs*tMC;
       E += dE;
       t += dt;
       meanMCs += MCs;
 
-      meanJumpLength += distanceMatrix[i][j];
+      meanJumpLength += es->getDistanceMatrix(i,j);
 
-      dx = dxR[i][jumpNumber];
-      dy = dyR[i][jumpNumber];
-
-      meandx  += dx;
-      meandy  += dy;
+      dx = positiondx[i][neighborNumber];
+      dy = positiondy[i][neighborNumber];
 
       actualmeanMCs += MCs;
 
@@ -552,12 +541,12 @@ void MKcurrentRejection::runCurrentRandomLattice(int steps,double &E, double &t)
       ts[s] = t;
       energy[s] = E;
       des[s] = dE;
-      dxsR[s] =  dx;
-      dysR[s] =  dy;
+      dxsReal[s] =  dx;
+      dysReal[s] =  dy;
       MCsteps[s]=MCs;
 
-      if (s%10000==0) {
-          printf("%6d E=%le t=%.4e MCs=%.3f\n",s,E,t,actualmeanMCs/10000);
+      if (s%100==0) {
+          printf("%6d E=%le t=%.4e MCs=%.3f\n",s,E,t,actualmeanMCs/100);
           actualmeanMCs =0;
       }
 
@@ -566,14 +555,6 @@ void MKcurrentRejection::runCurrentRandomLattice(int steps,double &E, double &t)
   printf("\n-------Finishing timesteps--------\n\n");
 
 
-  meanJumpLength /= steps;
-  meandx /= steps;
-  meandy /= steps;
-
-  printf("Mean dx:      %8.5f, dy:  %8.5f\n", meandx, meandy);
-  printf("\nMean jump length:                    %8.5f\n", meanJumpLength);
-  printf("Acceptance ratio: %.5f\n", double(numberOf2Site)/testedNumberOf2Site);
-
 }
 
 
@@ -581,21 +562,23 @@ void MKcurrentRejection::runCurrentRandomLattice(int steps,double &E, double &t)
 
 
 
-void MKcurrentRejection::initRandomLattice(int D1, int L1, int N1, int maxJL1, double a1, double beta1, double maxProbability1, double Bz, bool doTriJumps)
+void MKcurrentRejection::initRandomLattice(int D1, int L1, int N1, int maxJL1, double a1, double beta1, double maxProbability1, bool CintOn)
 { //  (D, L, N, p->maxJL, p->loc, 1.0/p->temp,p->maxProbability)
 
 
     int  n, i, j;
     double dx, dy;
-    RanGen = new CRandomMersenne(1); //seed??
+    RanGen = new CRandomMersenne(1);
+    Cint = CintOn;
+
+
 
 
     D=D1; L=L1; N=N1; A=a1; beta = beta1;
     maxJL = maxJL1; JL2 = 2*maxJL+1;
 
     maxProbability=maxProbability1/beta;
-    maxAccept = 6*exp(-A);
-
+    maxAccept = 1.8*2*6*exp(-A);
 
 
   //  Nmem = JL2*JL2; // Number of sites we can jump to
@@ -607,15 +590,13 @@ void MKcurrentRejection::initRandomLattice(int D1, int L1, int N1, int maxJL1, d
     finalSite    = new int*[N];
     NmemArray = new int[N];
 
-    dxInter = new double*[N];
-    dyInter = new double*[N];
-    dxFinal = new double*[N];
-    dyFinal = new double*[N];
+    indexdx = new int*[N];
+    indexdy = new int*[N];
 
-    dxRIndex = new int*[N];
-    dyRIndex = new int*[N];
-    dxR = new double*[N];
-    dyR = new double*[N];
+    positiondx = new double*[N];
+    positiondy = new double*[N];
+
+    neighborList = new int*[N];
 
 
     // Initializing site positions
@@ -631,10 +612,13 @@ void MKcurrentRejection::initRandomLattice(int D1, int L1, int N1, int maxJL1, d
 
    averageNmem = 0;
 
+double distance = 0;
+
+
     // Setting up arrays to be used
     distanceMatrix = new double*[N];
     for (i=0; i<N; i++){
-      distanceMatrix[i] = new double[N];
+      distanceMatrix[i] = new double[i];
       NmemArray[i] = 0;
       for (j=0; j<N; j++){
           dx = sitePositions[j][0] - sitePositions[i][0];
@@ -647,63 +631,68 @@ void MKcurrentRejection::initRandomLattice(int D1, int L1, int N1, int maxJL1, d
           else if (dy < -L/2) dy += L;
 
 
-          distanceMatrix[i][j] = sqrt(dx*dx + dy*dy);
-          if (distanceMatrix[i][j] < maxJL) NmemArray[i]++;
+          distance = sqrt(dx*dx + dy*dy);
+          if (distance < maxJL) NmemArray[i]++;
+          if (j < i) distanceMatrix[i][j] = distance;
+
       }
       averageNmem += NmemArray[i];
-      finalSite[i] = new int[NmemArray[i]];
-      dxRIndex[i] = new int[NmemArray[i]];
-      dyRIndex[i] = new int[NmemArray[i]];
-      dxR[i] = new double[NmemArray[i]];
-      dyR[i] = new double[NmemArray[i]];
+      neighborList[i] = new int[NmemArray[i]];
+      indexdx[i] = new int[NmemArray[i]];
+      indexdy[i] = new int[NmemArray[i]];
+      positiondx[i] = new double[NmemArray[i]];
+      positiondy[i] = new double[NmemArray[i]];
     }
+
+    es->setDistanceMatrix(distanceMatrix, N);
+
     averageNmem /= N;
-    int dxSiteIndex, dySiteIndex;
-    int x,y,x2,y2;
+
+    double distanceFromMatrix;
     for (i=0; i<N; i++){
         n = 0;
-        for (dxSiteIndex = -maxJL; dxSiteIndex < maxJL + 1; dxSiteIndex++){
-            for (dySiteIndex= -maxJL; dySiteIndex < maxJL + 1; dySiteIndex++){
-                if (dySiteIndex != 0 || dxSiteIndex != 0){
+        for (j=0; j<N; j++){
 
-                    x = i%L;
-                    y = i/L;
+             distance = es->getDistanceMatrix(i,j);
+             (j < i) ? distanceFromMatrix = distanceMatrix[i][j] : distanceFromMatrix = distanceMatrix[j][i];
+//             printf("distance es: %.3f, distanceMatrix: %.3f\n", es->getDistanceMatrix(i,j), distanceFromMatrix);
 
-                    x2 = x+dxSiteIndex; if (x2 >= L) x2 -= L; else if (x2 < 0) x2 += L;
-                    y2 = y+dySiteIndex; if (y2 >= L) y2 -= L; else if (y2 < 0) y2 += L;
+             if (distance < maxJL) {
+                 neighborList[i][n] = j;
+//                 indexdx[i][n] = dxSiteIndex;
+//                 indexdy[i][n] = dySiteIndex;
 
-                    j = x2 + y2 * L;
-                    if (distanceMatrix[i][j] < maxJL) {
-                        finalSite[i][n] = j;
-                        dxRIndex[i][n] = dxSiteIndex;
-                        dyRIndex[i][n] = dySiteIndex;
 
-                        dx = sitePositions[j][0] - sitePositions[i][0];
-                        dy = sitePositions[j][1] - sitePositions[i][1];
+                 dx = sitePositions[j][0] - sitePositions[i][0];
+                 dy = sitePositions[j][1] - sitePositions[i][1];
 
-                        if      (dx > L/2) dx -= L;
-                        else if (dx < -L/2) dx += L;
 
-                        if      (dy > L/2) dy -= L;
-                        else if (dy < -L/2) dy += L;
+                 dx = sitePositions[j][0] - sitePositions[i][0];
+                 dy = sitePositions[j][1] - sitePositions[i][1];
 
-                        dxR[i][n] = dx;
-                        dyR[i][n] = dy;
-                        n++;
-                    }
-                }
-            }
+                 if      (dx > L/2) dx -= L;
+                 else if (dx < -L/2) dx += L;
+
+                 if      (dy > L/2) dy -= L;
+                 else if (dy < -L/2) dy += L;
+
+
+                 positiondx[i][n] = dx;
+                 positiondy[i][n] = dy;
+
+                 n++;
+             }
+
+
         }
     }
 
 }
 
 
-void inline MKcurrentRejection::getjumpRandomLattice(int &i, int &j, int &jumpNumber)
+void inline MKcurrentRejection::getjumpRandomLattice(int &i, int &j, int &neighborNumber)
 {
   int x, y;
-  int x2, y2;
-  int dx,dy;
 
   i = RanGen->IRandom(0,N-1);
   while (es->getocci(i) == 0){ // i is occupied
@@ -713,112 +702,77 @@ void inline MKcurrentRejection::getjumpRandomLattice(int &i, int &j, int &jumpNu
   x = i%L;
   y = i/L;
 
-
-  jumpNumber = RanGen->IRandom(0,NmemArray[i]);
-
-  j = finalSite[i][jumpNumber];
+  neighborNumber = RanGen->IRandom(0,NmemArray[i]);
+  j = neighborList[i][neighborNumber];
 
   while (es->getocci(j) == 1){ // j is free
-    jumpNumber = RanGen->IRandom(0,NmemArray[i]);
-    j = finalSite[i][jumpNumber];
+    neighborNumber = RanGen->IRandom(0,NmemArray[i]);
+    j = neighborList[i][neighborNumber];
 
   }
 
 }
 
+#include <stdio.h>
 
-bool inline MKcurrentRejection::testjumpRandomLattice(int i, int j, int jumpNumber)
+bool inline MKcurrentRejection::testjumpRandomLattice(int i, int j, int neighborNumber)
 {
   double r2, gamma, acceptance3;
   double r_ij, r_ik, r_jk, dEij, dEik, dEjk, dEkj, dEki, area, overlap3;
   double rinv_ij, rinv_ik, rinv_jk;
-  int dxI, dyI, k, xI, yI, x, y;
-  int startDx, startDy, endDx, endDy;
-  double siteDx, siteDy, siteDxi, siteDyi;
-  int jumpNumberInter, dx, dy;
+  double physicaldx, physicaldy;
+  int indexdxToFinal, indexdyToFinal;
+  double box_x_max, box_x_min, box_y_max, box_y_min;
+  int neighbor;
+  double dxNeighbor, dyNeighbor;
 
+  physicaldx = positiondx[i][neighborNumber];
+  physicaldy = positiondy[i][neighborNumber];
 
-  siteDx = dxR[i][jumpNumber];
-  siteDy = dyR[i][jumpNumber];
+  indexdxToFinal = indexdx[i][neighborNumber];
+  indexdyToFinal = indexdy[i][neighborNumber];
 
-  dx = dxRIndex[i][jumpNumber];
-  dy = dyRIndex[i][jumpNumber];
+  r_ij =  es->getDistanceMatrix(i,j);
 
-  x = i%L; y = i/L;
-
-  r_ij =  distanceMatrix[i][j];
-  if (r_ij > maxJL) return false;
-
-  dEij = es->hoppEdiffij(i,j) + siteDx*Ex + siteDy*Ey;
+  dEij = es->hoppEdiffRandomPositions(i,j) + physicaldx*Ex + physicaldy*Ey;
   if (dEij < 0) dEij = 1;
   else dEij = exp(-beta*dEij);
   gamma = exp(-A*r_ij)*dEij;
 
   rinv_ij = 1 / r_ij;;
-  if (rinv_ij < es->rmaxi) rinv_ij = 0;
+  if (!Cint) rinv_ij = 0;
 
-  // For optimization
-  startDx = 0;  startDy = 0;
-  endDx   = dx; endDy   = dy;
+  // BBbox optimization
+  makeBBbox(physicaldx, physicaldy, box_x_max, box_x_min, box_y_max, box_y_min);
 
-  if (dx < 0){
-      startDx = dx;
-      endDx = 0;
-  }
-  if (dy < 0){
-      startDy = dy;
-      endDy = 0;
-  }
-  if (jumpNumber == 0){
-      startDx = -1;
-      endDx = 1;
-  }
-  if (dy == 0){
-      startDy = -1;
-      endDy = 1;
-  }
+//  printf("dx: %.3f, dy: %.3f, BBbox: top: %.3f, bot: %.3f, left: %.3f, right: %.3f\n", physicaldx, physicaldy, box_y_max, box_y_min, box_x_min, box_x_max);
 
 
-  dyI = startDy;
+  int neighborSite;
+  if (Hz != 0) {
+      for (neighbor = 0; neighbor<NmemArray[i]; neighbor++){
+          dxNeighbor = positiondx[i][neighbor];
+          dyNeighbor = positiondy[i][neighbor];
+          area = 0.5*(dxNeighbor*physicaldy - physicaldx*dyNeighbor);
 
-
-
-//  printf("\n----------------------------------------------------------------\ndx: %3d, dy: %3d\ntriDx: %5.3f, triDy: %5.3f\n", dx, dy, triDx, triDy);
-
-  if (Hz != 0)
-  for (jumpNumberInter = 0; jumpNumberInter < NmemArray[i]; jumpNumberInter++) {
-
-
-
-      dxI = dxRIndex[i][jumpNumberInter];
-      dyI = dyRIndex[i][jumpNumberInter];
-      if (dxI*dxI + dyI*dyI < maxJL*maxJL){
-          if (dxI > startDx && dxI < endDx && dyI > startDy && dyI < endDy){
-              siteDxi = dxR[i][jumpNumberInter];
-              siteDyi = dyR[i][jumpNumberInter];
-
-              area = 0.5*(siteDxi*siteDy - siteDx*siteDyi);
-
-              k = finalSite[i][jumpNumberInter];
-
-              r_ik =  distanceMatrix[i][k];
-              r_jk =  distanceMatrix[j][k];
+          neighborSite = neighborList[i][neighbor];
+          if ( neighborSite != j &&  isInsideBox(dxNeighbor, dyNeighbor,box_x_max,box_x_min,box_y_max,box_y_min) ){
+              r_ik =  es->getDistanceMatrix(i,neighborSite);
+              r_jk =  es->getDistanceMatrix(j,neighborSite);
 
 
               overlap3 = exp(-0.5*A*(r_ij + r_ik + r_jk));
 
               rinv_ik = 1 / r_ik;
               rinv_jk = 1 / r_jk;
-              if (rinv_ik < es->rmaxi) rinv_ik = 0;
-              if (rinv_jk < es->rmaxi) rinv_jk = 0;
+              if ( !Cint ) rinv_ik = 0;
+              if ( !Cint ) rinv_jk = 0;
 
+              if (es->getocci(neighbor) == 0){
 
-
-              if (es->getocci(k) == 0){
-
-                  dEik = es->hoppEdiffij(i,k) + siteDxi*Ex + siteDyi*Ey;
-                  dEjk = es->hoppEdiffij(j,k) + (siteDx-siteDxi)*Ex + (siteDy-siteDyi)*Ey + rinv_ij + rinv_jk - rinv_ik;
-                  dEkj = es->hoppEdiffij(k,j) + (siteDxi-siteDx)*Ex + (siteDyi-siteDy)*Ey + rinv_ik + rinv_jk - rinv_ij;
+                  dEik = es->hoppEdiffRandomPositions(i,neighborSite) + dxNeighbor*Ex + dyNeighbor*Ey;
+                  dEjk = es->hoppEdiffRandomPositions(j,neighborSite) + (physicaldx-dxNeighbor)*Ex + (physicaldy-dyNeighbor)*Ey + rinv_ij + rinv_jk - rinv_ik;
+                  dEkj = es->hoppEdiffRandomPositions(neighborSite,j) + (dxNeighbor-physicaldx)*Ex + (dxNeighbor-physicaldy)*Ey + rinv_ik + rinv_jk - rinv_ij;
 
                   (dEik < 0) ? dEik = 1 : dEik = exp(-beta*dEik);
                   (dEjk < 0) ? dEjk = 1 : dEjk = exp(-beta*dEjk);
@@ -829,9 +783,9 @@ bool inline MKcurrentRejection::testjumpRandomLattice(int i, int j, int jumpNumb
               }
               else {
 
-                  dEik = es->hoppEdiffij(i,k) + siteDxi*Ex + siteDyi*Ey + rinv_jk + rinv_ik - rinv_ij;
-                  dEki = es->hoppEdiffij(k,i) - siteDxi*Ex - siteDyi*Ey - rinv_jk + rinv_ik + rinv_ij;
-                  dEkj = es->hoppEdiffij(k,j) + (siteDx-siteDxi)*Ex + (siteDy-siteDyi)*Ey;
+                  dEik = es->hoppEdiffRandomPositions(i,neighborSite) + dxNeighbor*Ex + dyNeighbor*Ey + rinv_jk + rinv_ik - rinv_ij;
+                  dEki = es->hoppEdiffRandomPositions(neighborSite,i) - dxNeighbor*Ex - dyNeighbor*Ey - rinv_jk + rinv_ik + rinv_ij;
+                  dEkj = es->hoppEdiffRandomPositions(neighborSite,j) + (physicaldy-dxNeighbor)*Ex + (physicaldy-dyNeighbor)*Ey;
 
                   (dEik < 0) ? dEik = 1 : dEik = exp(-beta*dEik);
                   (dEki < 0) ? dEki = 1 : dEki = exp(-beta*dEki);
@@ -843,18 +797,65 @@ bool inline MKcurrentRejection::testjumpRandomLattice(int i, int j, int jumpNumb
           }
       }
   }
+
+
+
 //  double testsum = gamma - exp(-A*r_ij)*dEij;
-//  printf("dx: %2d, dy: %2d, r_ij: %.4f, 2_rate %7.4e, correction %7.4f\n", dx, dy,r_ij, exp(-A*r_ij)*dEij, testsum / (exp(-A*r_ij)*dEij));
+//  printf("total rate: %.4e, direct rate: %.4e\n", gamma, exp(-A*r_ij)*dEij);
+//  printf("dx: %.3f, dy: %.3f, r_ij: %.4f, 2_rate %7.4e, correction %7.4e\n", physicaldx, physicaldy, r_ij, exp(-A*r_ij)*dEij, testsum / (exp(-A*r_ij)*dEij));
 //  if (dx == -1 && dy == 0 && dEij == 1 ) printf("g/g_max: %6.4e\n", gamma/maxAccept);
 
 //  printf("\n----------------------------------------------------------------\n");
 
-  if (gamma >= maxAccept) printf("Rate larger than max accept!!! gamma: %.4f, maxAccept: %.4f, dx: %.4f, dy: %.4f\n", gamma, maxAccept, siteDx, siteDy);
+//  printf("Ratio of used neighbors: %.3f\n", double(insideBox)/NmemArray[i]);
+
+
+  if (gamma >= maxAccept) printf("Rate larger than max accept!!! gamma: %.4f, maxAccept: %.4f\n", gamma, maxAccept);
   r2 = maxAccept*es->ran2(0);
   return (r2 < gamma);
 
 
 }
+
+void MKcurrentRejection::makeBBbox(double dx, double dy, double &box_x_max, double &box_x_min, double &box_y_max, double &box_y_min){
+
+    if (dx < 0){
+        box_x_min = dx;
+        box_x_max = 0;
+    }
+    if (dx > 0){
+        box_x_max = dx;
+        box_x_min = 0;
+    }
+
+    if (dy < 0){
+        box_y_min = dy;
+        box_y_max = 0;
+    }
+    if (dy > 0){
+        box_y_max = dy;
+        box_y_min = 0;
+    }
+
+    if (fabs(dx) < 1){
+        box_x_max += 1;
+        box_x_min -= 1;
+    }
+
+    if (fabs(dy) < 1){
+        box_y_max += 1;
+        box_y_min -= 1;
+    }
+}
+
+bool MKcurrentRejection::isInsideBox(double dx, double dy, double box_x_max, double box_x_min, double box_y_max, double box_y_min){
+    if (dx > box_x_max) return false;
+    if (dx < box_x_min) return false;
+    if (dy > box_y_max) return false;
+    if (dy < box_y_min) return false;
+    return true;
+}
+
 
 void MKcurrentRejection::jumpsToFileSmallRandomLattice(string filename, int steps)
 {
@@ -871,8 +872,8 @@ void MKcurrentRejection::jumpsToFileSmallRandomLattice(string filename, int step
   FileWrite(f,st.c_str(),st.length());
 
   for(s = 0; s < steps; s++){
-      cumdx += dxsR[s];
-      cumdy += dysR[s];
+      cumdx += dxsReal[s];
+      cumdy += dysReal[s];
       if (s%writelines == 0){
         st = FloatToStr(ts[s])+"\t"+DoubleToStr(energy[s])+"\t"+IntToStr(from[s])+"\t"+IntToStr(to[s])+"\t"+DoubleToStr(cumdx)+"\t"+DoubleToStr(cumdy)+"\t"+IntToStr(MCsteps[s])+"\t"+FloatToStr(des[s])+"\n";
         FileWrite(f,st.c_str(),st.length());
@@ -1047,7 +1048,6 @@ void MKcurrentRejection::updateMovement(double** &vector, int i, int j, int dWha
     vector[y0][x0] += dWhat;
     vector[y1][x1] += dWhat;
 }
-
 
 
 

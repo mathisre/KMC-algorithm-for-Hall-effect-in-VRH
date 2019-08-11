@@ -40,6 +40,7 @@ public:	// Anwender-Deklarationen
  bool doTriJumps;
  int *tpos;
  double randShift;
+ bool CintRandom;
 
 public:		// Anwender-Deklarationen
 

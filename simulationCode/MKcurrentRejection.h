@@ -24,7 +24,7 @@ public:
     void setES(ESystem *e);
 
     void init(int D1, int L1, int N1, int maxJL1, double a1, double beta1, double maxProbability1);
-    void initRandomLattice(int D1, int L1, int N1, int maxJL1, double a1, double beta1, double maxProbability1, double Bz, bool doTriJumps);
+    void initRandomLattice(int D1, int L1, int N1, int maxJL1, double a1, double beta1, double maxProbability1, bool CintOn);
 
     void setE(double Ex1, double Ey1, double Ez1);
     void setH(double Hx1, double Hy1, double Hz1);
@@ -74,19 +74,23 @@ public:
 
 
 
+
 private:
     CRandomMersenne *RanGen;
     //	double inline getJL(int dx, int dy, int dz);
     //      savedstate inline *checkstateexistance();
     void inline getjump(int &i, int &j, int &dx, int &dy);
-    bool inline testjump(int i, int j, int dx, int dy);
+    bool inline testjump(int i, int j, int dx,   int dy);
     double threeSiteCorrectionRates(int i, int j, int dx, int dy, double dEij, double r_ij);
 
     void inline getjumpTriLattice(int &i, int &j, int &dx, int &dy);
     bool inline testjumpTriLattice(int i, int j, int dx, int dy);
 
-    void inline getjumpRandomLattice(int &i, int &j, int &jumpNumber);
-    bool inline testjumpRandomLattice(int i, int j, int jumpNumber);
+    void inline getjumpRandomLattice(int &i, int &j, int &neighborNumber);
+    bool inline testjumpRandomLattice(int i, int j, int neighborNumber);
+
+    void makeBBbox(double dx, double dy, double &box_x_max, double &box_x_min, double &box_y_max, double &box_y_min);
+    bool isInsideBox(double dx, double dy, double box_x_max, double box_x_min, double box_y_max, double box_y_min);
 
     //	double inline calcRate2d(int n1, int n2, int dx, int dy);
 
@@ -134,11 +138,16 @@ private:
     ESystem *es;
 
     double **sitePositions,  **distanceMatrix;
+    int **indexdx, **indexdy;
+    double **positiondx, **positiondy;
+    int **neighborList;
+
+
     double **dxInter,**dyInter,**dxFinal,**dyFinal;
     double **dxR, **dyR;
     int **dxRIndex, **dyRIndex;
     int **inter3Site, **final3Site,  **finalSite;
-    double *dxsR, *dysR;
+    double *dxsReal, *dysReal;
     int *NmemArray;
     double averageNmem;
 
@@ -146,6 +155,8 @@ private:
     double **movement  ;
     double **xmovement ;
     double **ymovement ;
+
+    bool Cint;
 
 
 };
