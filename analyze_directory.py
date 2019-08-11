@@ -1,6 +1,7 @@
-# Read dx jump data and uses linear fit to measure conductivity for variations in temperature and electric field
-# Saves data in files of constant E and constant T
-# Put data location file (inside data/) and 
+# BEFORE USAGE: Define masterData to be folder containing data folders
+# BEFORE USAGE: Define combinedDataLoc to be folder where plottable data files are to be placed
+
+# Usage: python3 analyze_directory.py directoryToBeAnalyzed nameOfOutputFile
 from __future__ import print_function
 
 from sys import argv, version_info
@@ -42,7 +43,7 @@ except (IndexError, ValueError):
 	print(message)
 	exit()
 
-saveFilename = saveName + "_conductivity.dat"
+saveFilename = saveName + ".dat"
 
 loc = sampler.extractLocalizationLength(location)
 fill = 0.5
