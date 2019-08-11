@@ -175,34 +175,7 @@ else:
 print("Filename:", saveFilename)
 
 
-def everythingOK(variedL, L, loc):	
-	ok = get_input("Filename ok? (y/n) " )
-	while ok != "y":
-		while ok != "n" and "loc" not in ok and "L=" not in ok and "embed" not in ok:
-			print(ok)
-			ok = get_input("Filename ok? (y/n) " )		    
-		variedL, L, loc = readInput(ok, variedL, L, loc)
-		ok = get_input("Filename ok? (y/n) " )		    
-	return variedL, L, loc
-
-
-def readInput(ok, variedL, L, loc):
-	if ok == "y":
-		return variedL, L, loc
-	elif ok == "n":
-		exit()
-	elif "loc" in ok:
-		loc = float(ok.split("=")[1])
-		return variedL, L, loc
-	elif "L" in ok:
-		L = int(ok.split("=")[1])
-		variedL = [L for _ in range(len(variedL))]
-		return variedL, L, loc
-	elif "embed" in ok:
-		embed()
-		return variedL, L, loc
-
-variedL, L, loc = everythingOK(variedL, L, loc)
+variedL, L, loc = sampler.everythingOK(variedL, L, loc)
 
 
 print("A = ", loc)
